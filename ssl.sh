@@ -1,0 +1,1 @@
+openssl req -x509 -newkey rsa:4096 -keyout ./certs/server.key -out ./certs/server.pem -days 3650 -nodes -subj "/CN=192.168.1.9" -addext "subjectAltName=IP:192.168.1.9,DNS:localhost"

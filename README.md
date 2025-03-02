@@ -1,97 +1,105 @@
-# Make-SSL
+# SSL证书生成工具
 
-一个用Go语言编写的命令行工具，用于生成自签名SSL证书。
+这是一个简单易用的命令行工具，用于生成自签名SSL证书。该工具基于OpenSSL，可以快速生成用于开发和测试环境的证书。
 
 ## 功能特点
 
-- 检查证书文件是否存在，避免重复生成
-- 支持指定自定义域名和IP地址
-- 支持自定义证书有效期
-- 默认使用[域名].key和[域名].pem作为文件名
-- 自动创建证书目录
-- 自动设置适当的文件权限
-- certs目录已加入.gitignore，不会被提交到Git仓库
+- 一键生成RSA 4096位自签名SSL证书
+- 自动设置证书的Common Name (CN)
+- 支持配置Subject Alternative Name (SAN)
+- **始终将DNS:localhost添加为主题别名**，确保本地开发环境可用
+- 自动检测IP地址格式的CN，并添加为IP主题别名
+- 默认使用CN值作为证书文件名
+- 支持自定义证书目录路径和有效期
 
-## 依赖项
+## 安装要求
 
-- OpenSSL（需要在系统上预先安装）
-- Go 1.13+（如果要从源码编译）
+- Go 1.15或更高版本
+- OpenSSL命令行工具
 
-## 安装
-
-### 从源码编译
+## 安装方法
 
 ```bash
-git clone https://github.com/imlida/make-ssl.git
+# 克隆仓库
+git clone https://github.com/yourusername/make-ssl.git
 cd make-ssl
+
+# 构建
 go build -o make-ssl
 ```
-
-### 使用预编译二进制文件
-
-从 [Releases](https://github.com/imlida/make-ssl/releases) 页面下载适用于您操作系统的二进制文件。
 
 ## 使用方法
 
 ### 基本用法
 
 ```bash
-# 使用默认参数，在当前目录的certs子目录下生成证书
-# 证书将保存为 certs/localhost.pem 和 certs/localhost.key
+# 使用默认设置生成证书（CN=localhost）
 ./make-ssl
 
-# 指定Common Name
-# 证书将保存为 certs/example.com.pem 和 certs/example.com.key
-./make-ssl -cn example.com
+# 指定CN为IP地址
+./make-ssl -cn 192.168.1.9
 
-# 指定IP地址和域名作为SAN（主题备用名称）
-./make-ssl -cn example.com -alt-names "DNS:example.com,IP:192.168.1.8,DNS:localhost"
+# 指定额外的主题别名
+./make-ssl -cn example.com -alt-names "IP:192.168.1.9"
 ```
 
-### 可用选项
+### 命令行参数
 
-```
-  -alt-names string
-        额外的主题别名 (格式: DNS:example.com,IP:192.168.1.1)
-  -cert-file string
-        证书文件名 (默认为 [域名].pem)
-  -cert-path string
-        证书存放目录路径 (默认 "./certs")
-  -cn string
-        证书的Common Name (CN) (默认 "localhost")
-  -days int
-        证书有效期(天) (默认 3650)
-  -key-file string
-        私钥文件名 (默认为 [域名].key)
-```
+| 参数 | 描述 | 默认值 |
+|------|------|--------|
+| `-cert-path` | 证书存放目录路径 | `./certs` |
+| `-cn` | 证书的Common Name (CN) | `localhost` |
+| `-days` | 证书有效期(天) | `3650` (约10年) |
+| `-alt-names` | 额外的主题别名 | `""` (空) |
+| `-cert-file` | 证书文件名 | `[CN].pem` |
+| `-key-file` | 私钥文件名 | `[CN].key` |
 
-## 示例
+## 使用示例
 
 ### 为本地开发生成证书
 
 ```bash
-./make-ssl -cn localhost -alt-names "DNS:localhost,IP:127.0.0.1"
+./make-ssl
 ```
 
-### 为Web服务器生成证书
+这将在`./certs`目录下生成`localhost.pem`和`localhost.key`文件，有效期为10年。
+
+### 为特定IP地址生成证书
 
 ```bash
-./make-ssl -cn example.com -alt-names "DNS:example.com,DNS:www.example.com" -cert-path /etc/ssl/certs
+./make-ssl -cn 192.168.1.9
 ```
 
-### 生成长期有效的证书
+这将生成CN为`192.168.1.9`的证书，并自动添加`IP:192.168.1.9`和`DNS:localhost`作为主题别名。
+
+### 为域名生成证书并添加多个主题别名
 
 ```bash
-./make-ssl -cn example.com -days 7300
+./make-ssl -cn example.com -alt-names "IP:192.168.1.9,IP:10.0.0.1"
 ```
 
-### 指定自定义文件名
+这将生成CN为`example.com`的证书，并添加指定的IP地址和`DNS:localhost`作为主题别名。
+
+### 自定义证书路径和文件名
 
 ```bash
-# 如果您不想使用域名作为文件名
-./make-ssl -cn example.com -cert-file custom.pem -key-file custom.key
+./make-ssl -cn 192.168.1.9 -cert-path "/etc/ssl" -cert-file "mycert.pem" -key-file "mykey.key"
+```
+
+## 注意事项
+
+- 此工具生成的是**自签名证书**，浏览器会显示安全警告。若要避免警告，需要将证书添加到系统或浏览器的信任存储中。
+- 始终确保您的私钥文件（.key）受到保护，不要将其共享或提交到版本控制系统。
+- 本工具适用于开发和测试环境，生产环境建议使用权威证书颁发机构(CA)签发的证书。
+
+## 命令示例
+
+以下是工具实际执行的命令示例：
+
+```
+openssl req -x509 -newkey rsa:4096 -keyout ./certs/192.168.1.9.key -out ./certs/192.168.1.9.pem -days 3650 -nodes -subj "/CN=192.168.1.9" -addext "subjectAltName=IP:192.168.1.9,DNS:localhost"
 ```
 
 ## 许可证
 
-MIT
+[MIT License](LICENSE)
