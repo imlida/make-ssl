@@ -1,0 +1,19 @@
+# 证书目录
+/certs/
+
+# 编译生成的可执行文件
+/make-ssl
+/make-ssl.exe
+
+# Go相关的临时文件和目录
+*.o
+*.a
+*.so
+/_obj
+/_test
+*.exe
+*.test
+*.prof
+*.out
+/vendor/
+/Godeps/ 
